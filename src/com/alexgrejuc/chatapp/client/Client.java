@@ -2,6 +2,7 @@ package com.alexgrejuc.chatapp.client;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Scanner;
 
 /**
@@ -50,16 +51,18 @@ public class Client {
      * Sends messages from this client to all other clients.
      */
     public void sendMessages() {
-        boolean serverOnline = true;
         try {
             Scanner scanner = new Scanner(System.in);
 
-            while (!socket.isClosed() && serverOnline) {
+            while (!socket.isClosed()) {
                 String message = getMessage(scanner);
                 sendMessage(message);
+
+                if (message.equalsIgnoreCase(":quit")) {
+                    closeAllResources();
+                }
             }
         } catch (IOException ioe) {
-            serverOnline = false;
             System.err.println("Cannot send message because the server is offline.");
             closeAllResources();
         }
@@ -103,7 +106,12 @@ public class Client {
                             System.out.println("Cannot receive messages because the server is offline.");
                         }
 
-                    } catch (IOException ioe) {
+                    } catch (SocketException se) {
+                        // The socket has been closed from the message sending thread.
+                        // The next loop will see the socket is closed and this thread will stop.
+                        System.out.println("Goodbye, " + username);
+                    }
+                    catch (IOException ioe) {
                         System.err.println("Error listening for messages:");
                         ioe.printStackTrace();
                         closeAllResources();
@@ -151,7 +159,5 @@ public class Client {
         } catch (IOException ioe) {
             System.out.println("Error connecting to the server. Perhaps it is offline or your configuration is incorrect.");
         }
-
-        System.out.println("Terminating execution.");
     }
 }

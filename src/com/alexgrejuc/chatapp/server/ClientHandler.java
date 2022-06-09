@@ -3,6 +3,7 @@ package com.alexgrejuc.chatapp.server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * Handles an individual client's connection, disconnection, and messaging.
@@ -27,6 +28,7 @@ public class ClientHandler implements Runnable {
 
             // A client sends their username when first logging in
             this.clientUsername = messageReader.readLine();
+            System.out.println(clientUsername + " has connected.");
 
             clientHandlers.add(this);
             broadcastServerMessage(clientUsername + " has entered the chat.");
@@ -52,7 +54,7 @@ public class ClientHandler implements Runnable {
                 messageFromClient = messageReader.readLine();
 
                 // null means the end of stream was reached, i.e. the client disconnected abruptly
-                clientConnected = messageFromClient != null;
+                clientConnected = messageFromClient != null && !messageFromClient.equalsIgnoreCase(":quit");
 
                 if (clientConnected) {
                     broadcastMessage(messageFromClient);
@@ -110,7 +112,10 @@ public class ClientHandler implements Runnable {
      */
     public void removeClientHandler() {
         clientHandlers.remove(this);
-        broadcastServerMessage(clientUsername + " has left the chat.");
+
+        String quitMessage = clientUsername + " has left the chat";
+        System.out.println(quitMessage);
+        broadcastServerMessage(quitMessage);
     }
 
     /**
