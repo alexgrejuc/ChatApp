@@ -1,15 +1,17 @@
 package com.alexgrejuc.chatapp.server;
 
+import com.alexgrejuc.chatapp.message.MessageInfo;
+import com.alexgrejuc.chatapp.message.MessageInfoParser;
+
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Locale;
+import java.util.HashMap;
 
 /**
  * Handles an individual client's connection, disconnection, and messaging.
  */
 public class ClientHandler implements Runnable {
-    public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    public static HashMap<String, ClientHandler> clientHandlers = new HashMap();
 
     private Socket socket;
     private BufferedReader messageReader;
@@ -30,7 +32,7 @@ public class ClientHandler implements Runnable {
             this.clientUsername = messageReader.readLine();
             System.out.println(clientUsername + " has connected.");
 
-            clientHandlers.add(this);
+            clientHandlers.put(this.clientUsername, this);
             broadcastServerMessage(clientUsername + " has entered the chat.");
         } catch (IOException ioe) {
             System.err.println("Error creating client handler:");
@@ -57,7 +59,9 @@ public class ClientHandler implements Runnable {
                 clientConnected = messageFromClient != null && !messageFromClient.equalsIgnoreCase(":quit");
 
                 if (clientConnected) {
-                    broadcastMessage(messageFromClient);
+                    MessageInfo mi = MessageInfoParser.parse(messageFromClient);
+                    //broadcastMessage(messageFromClient);
+                    sendMessage(mi);
                 }
                 else {
                     closeAllResources();
@@ -71,20 +75,19 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Broadcasts a message to all clients except this one.
+     * Sends a message to a single recipient.
      * @param message
-     * @param senderName The name of the sender, which is either the server or client username.
+     * @param recipientName
      */
-    public void broadcastMessage(String message, String senderName) {
-        for (ClientHandler clientHandler : clientHandlers) {
+    private void sendMessageToOne(String message, String sender, String recipientName) {
+        if (clientHandlers.containsKey(recipientName)) {
             try {
-                if (clientHandler != this) {
-                    clientHandler.messageWriter.write(senderName + ": " + message);
-                    clientHandler.messageWriter.newLine();
-                    clientHandler.messageWriter.flush();
-                }
+                var recipient = clientHandlers.get(recipientName);
+                recipient.messageWriter.write(sender + ": " + message);
+                recipient.messageWriter.newLine();
+                recipient.messageWriter.flush();
             } catch (IOException ioe) {
-                System.err.println("Error broadcasting message: ");
+                System.err.println("Error sending message from " + this.clientUsername + " to " + recipientName + ":");
                 ioe.printStackTrace();
                 closeAllResources();
             }
@@ -92,26 +95,45 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Broadcasts a message from this client.
+     * Sends a message to all the recipients specified by the client.
      * @param message
      */
-    public void broadcastMessage(String message) {
-        broadcastMessage(message, clientUsername);
+    private void sendMessage(MessageInfo message) {
+        // User specified recipients, so only send to them
+        if (message.recipients.isPresent()) {
+            for (String recipient : message.recipients.get()) {
+                sendMessageToOne(message.message, clientUsername, recipient);
+            }
+        }
+        else {
+            // Usernames were not specified in the message string, so message all the other users
+            for (String recipient : clientHandlers.keySet()) {
+                if (!recipient.equals(clientUsername)) {
+                    sendMessageToOne(message.message, clientUsername, recipient);
+                }
+            }
+        }
+
     }
 
     /**
-     * Broadcasts a message from the server to all the clients.
+     * Broadcasts a message from the server to all clients except this one.
+     * e.g. "Alice has entered the chat."
      * @param message
      */
     public void broadcastServerMessage(String message) {
-        broadcastMessage(message, "SERVER");
+        for (ClientHandler clientHandler : clientHandlers.values()) {
+            if (clientHandler != this) {
+                sendMessageToOne(message, "SERVER", clientHandler.clientUsername);
+            }
+        }
     }
 
     /**
      * Removes clientHandler from clientHandlers to ensure no future messages are sent to it.
      */
     public void removeClientHandler() {
-        clientHandlers.remove(this);
+        clientHandlers.remove(this.clientUsername);
 
         String quitMessage = clientUsername + " has left the chat";
         System.out.println(quitMessage);
