@@ -1,9 +1,10 @@
-package com.alexgrejuc.chatapp.client;
+package com.alexgrejuc.chatclient;
+
+import javafx.scene.layout.VBox;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Scanner;
 
 /**
  * A client that sends and receives text messages to and from a chat server.
@@ -28,39 +29,17 @@ public class Client {
     }
 
     /**
-     * Gets a message from this client.
-     * @param scanner
-     * @return the message that a user would like to send.
-     */
-    public String getMessage(Scanner scanner) {
-        return scanner.nextLine();
-    }
-
-    /**
      * Sends a message from this client to all other clients.
      * @param message
-     * @throws IOException
      */
-    private void sendMessage(String message) throws IOException {
-        messageWriter.write(message);
-        messageWriter.newLine();
-        messageWriter.flush();
-    }
-
-    /**
-     * Sends messages from this client to all other clients.
-     */
-    public void sendMessages() {
+    public void sendMessage(String message) {
         try {
-            Scanner scanner = new Scanner(System.in);
+            messageWriter.write(message);
+            messageWriter.newLine();
+            messageWriter.flush();
 
-            while (!socket.isClosed()) {
-                String message = getMessage(scanner);
-                sendMessage(message);
-
-                if (message.equalsIgnoreCase(":quit")) {
-                    closeAllResources();
-                }
+            if (message.equalsIgnoreCase(":quit")) {
+                closeAllResources();
             }
         } catch (IOException ioe) {
             System.err.println("Cannot send message because the server is offline.");
@@ -87,7 +66,7 @@ public class Client {
      * Listens for messages from other clients and displays them to this client.
      * Since this is a blocking operation, it executes in its own thread.
      */
-    public void listenForMessages() {
+    public void listenForMessages(VBox vbox_messages) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -100,7 +79,7 @@ public class Client {
                         serverOnline = message != null;
 
                         if (serverOnline) {
-                            System.out.println(message);
+                            ClientController.attachSentMessage(message, vbox_messages);
                         }
                         else {
                             System.out.println("Cannot receive messages because the server is offline.");
@@ -134,30 +113,6 @@ public class Client {
         } catch (IOException ioe) {
             System.err.println("Error closing resources:");
             ioe.printStackTrace();
-        }
-    }
-
-    /**
-     * Gets a username from the client and connects to the server.
-     * Loops indefinitely in one thread for sending messages and another for receiving them.
-     * @param args
-     */
-    public static void main(String[] args) throws IOException {
-        try {
-            Socket socket = new Socket("localhost", 7777);
-
-            Scanner scanner = new Scanner(System.in);
-            System.out.print("Enter your username for the group chat: ");
-            String username = scanner.nextLine();
-
-            Client client = new Client(socket, username);
-            client.logIn();
-
-            // Infinite loop to read and send messages.
-            client.listenForMessages();
-            client.sendMessages();
-        } catch (IOException ioe) {
-            System.out.println("Error connecting to the server. Perhaps it is offline or your configuration is incorrect.");
         }
     }
 }

@@ -1,7 +1,7 @@
-package com.alexgrejuc.chatapp.server;
+package com.alexgrejuc.chatserver.server;
 
-import com.alexgrejuc.chatapp.message.MessageInfo;
-import com.alexgrejuc.chatapp.message.MessageInfoParser;
+import com.alexgrejuc.chatserver.message.MessageInfo;
+import com.alexgrejuc.chatserver.message.MessageInfoParser;
 
 import java.io.*;
 import java.net.Socket;

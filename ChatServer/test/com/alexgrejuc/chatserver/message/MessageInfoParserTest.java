@@ -1,4 +1,4 @@
-package com.alexgrejuc.chatapp.message;
+package com.alexgrejuc.chatserver.message;
 
 import org.junit.jupiter.api.Test;
 
