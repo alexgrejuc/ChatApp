@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.stage.WindowEvent;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -166,5 +167,18 @@ public class ClientController implements Initializable {
                 vbox.getChildren().add(messageBox);
             }
         });
+    }
+
+    /**
+     * Logs the client out if it has been connected to the server.
+     */
+    public void logOut() {
+        if (client != null) {
+            client.logOut();
+        }
+    }
+
+    public EventHandler<WindowEvent> getOnCloseHandler() {
+        return windowEvent -> logOut();
     }
 }

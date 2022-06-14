@@ -38,9 +38,6 @@ public class Client {
             messageWriter.newLine();
             messageWriter.flush();
 
-            if (message.equalsIgnoreCase(":quit")) {
-                closeAllResources();
-            }
         } catch (IOException ioe) {
             System.err.println("Cannot send message because the server is offline.");
             closeAllResources();
@@ -60,6 +57,14 @@ public class Client {
             ioe.printStackTrace();
             closeAllResources();
         }
+    }
+
+    /**
+     * Logs out of the chat room and closes this client's resources.
+     */
+    public void logOut() {
+        sendMessage(":quit");
+        closeAllResources();
     }
 
     /**
