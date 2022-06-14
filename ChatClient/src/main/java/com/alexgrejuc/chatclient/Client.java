@@ -84,7 +84,7 @@ public class Client {
                         serverOnline = message != null;
 
                         if (serverOnline) {
-                            ClientController.attachSentMessage(message, vbox_messages);
+                            ClientController.attachReceivedMessage(message, vbox_messages);
                         }
                         else {
                             System.out.println("Cannot receive messages because the server is offline.");

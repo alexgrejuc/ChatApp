@@ -49,11 +49,11 @@ public class ClientController implements Initializable {
     }
 
     /**
-     * Creates a blue right-aligned box for displaying a received message.
+     * Creates a blue right-aligned box for displaying a message sent by the client.
      * @param message
      * @return
      */
-    private static HBox createReceivedMessageBox(String message) {
+    private static HBox createSentMessageBox(String message) {
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER_RIGHT);
         hBox.setPadding(new Insets(5, 5, 5, 10));
@@ -71,11 +71,11 @@ public class ClientController implements Initializable {
     }
 
     /**
-     * Creates a gray left-aligned box for displaying a sent message.
+     * Creates a gray left-aligned box for displaying a message that the client received.
      * @param message
      * @return
      */
-    private static HBox createSentMessageBox(String message) {
+    private static HBox createReceivedMessageBox(String message) {
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER_LEFT);
         hBox.setPadding(new Insets(5, 5, 5, 10));
@@ -143,7 +143,7 @@ public class ClientController implements Initializable {
                         String message = takeMessage();
 
                         if (!message.isEmpty()) {
-                            HBox messageBox = createReceivedMessageBox(message);
+                            HBox messageBox = createSentMessageBox(message);
                             vbox_messages.getChildren().add(messageBox);
                             client.sendMessage(message);
                         }
@@ -154,12 +154,12 @@ public class ClientController implements Initializable {
     }
 
     /**
-     * Attaches a sent message to the bottom of the message display.
+     * Attaches a received message to the bottom of the message display.
      * @param message
      * @param vbox
      */
-    public static void attachSentMessage(String message, VBox vbox) {
-        HBox messageBox = createSentMessageBox(message);
+    public static void attachReceivedMessage(String message, VBox vbox) {
+        HBox messageBox = createReceivedMessageBox(message);
 
         Platform.runLater(new Runnable() {
             @Override
