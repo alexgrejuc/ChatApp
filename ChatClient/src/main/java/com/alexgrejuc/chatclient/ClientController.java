@@ -12,6 +12,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -39,6 +41,58 @@ public class ClientController implements Initializable {
     private Client client;
 
     /**
+     * Initializes the event handlers for signing in, sending, receiving, and updating the display.
+     * @param url
+     * @param resourceBundle
+     */
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        tf_message.setText("Enter a username:");
+
+        // Scroll to bottom when messages are sent.
+        vbox_messages.heightProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
+                sp_main.setVvalue((Double) newValue);
+            }
+        });
+
+
+        // A one-time event that clears the username prompt text.
+        tf_message.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent) {
+                tf_message.clear();
+                tf_message.removeEventHandler(MouseEvent.MOUSE_CLICKED, this);
+            }
+        });
+
+        // Sets a one-time handler for getting a username and a recurring handler for sending messages.
+        tf_message.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent keyEvent) {
+                if (keyEvent.getCode().equals(KeyCode.ENTER)) {
+                    String username = takeMessage();
+
+                    // Try to connect to the server with the given username.
+                    try {
+                        Socket socket = new Socket("localhost", 7777);
+                        client = new Client(socket, username);
+                        client.logIn();
+                    } catch (IOException ioe) {
+                        System.out.println("Error connecting to the server. Perhaps it is offline or your configuration is incorrect.");
+                    }
+
+                    // This is a one-time action for getting a username. The handler has fired, so remove it.
+                    tf_message.removeEventHandler(KeyEvent.KEY_PRESSED, this);
+                    client.listenForMessages(vbox_messages);
+                    tf_message.setOnKeyPressed(ke -> handleTextFieldEnterKey(ke));
+                }
+            }
+        });
+    }
+
+    /**
      * Reads the message from the text field and clears it.
      * @return
      */
@@ -46,6 +100,54 @@ public class ClientController implements Initializable {
         String message = tf_message.getText();
         tf_message.clear();
         return message;
+    }
+
+    /**
+     * Sends the message in the text field and updates the display.
+     */
+    private void sendMessage() {
+        String message = takeMessage();
+
+        if (!message.isEmpty()) {
+            HBox messageBox = createSentMessageBox(message);
+            vbox_messages.getChildren().add(messageBox);
+            client.sendMessage(message);
+        }
+    }
+
+    private void handleTextFieldEnterKey(KeyEvent event) {
+        if (event.getCode().equals(KeyCode.ENTER)) {
+            sendMessage();
+        }
+    }
+
+    /**
+     * Attaches a received message to the bottom of the message display.
+     * @param message
+     * @param vbox
+     */
+    public static void attachReceivedMessage(String message, VBox vbox) {
+        HBox messageBox = createReceivedMessageBox(message);
+
+        Platform.runLater(new Runnable() {
+            @Override
+            public void run() {
+                vbox.getChildren().add(messageBox);
+            }
+        });
+    }
+
+    /**
+     * Logs the client out if it has been connected to the server.
+     */
+    public void logOut() {
+        if (client != null) {
+            client.logOut();
+        }
+    }
+
+    public EventHandler<WindowEvent> getOnCloseHandler() {
+        return windowEvent -> logOut();
     }
 
     /**
@@ -88,97 +190,5 @@ public class ClientController implements Initializable {
         textFlow.setPadding(new Insets(5, 10, 5, 10));
         hBox.getChildren().add(textFlow);
         return hBox;
-    }
-
-    /**
-     * Initializes the event handlers for signing in, sending, receiving, and updating the display.
-     * @param url
-     * @param resourceBundle
-     */
-    @Override
-    public void initialize(URL url, ResourceBundle resourceBundle) {
-        tf_message.setText("Enter a username:");
-
-        // Scroll to bottom when messages are sent.
-        vbox_messages.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, Number newValue) {
-                sp_main.setVvalue((Double) newValue);
-            }
-        });
-
-        // A one-time event that clears the username prompt text.
-        tf_message.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent mouseEvent) {
-                tf_message.clear();
-                tf_message.removeEventHandler(MouseEvent.MOUSE_CLICKED, this);
-            }
-        });
-
-        // Sets a one-time handler for getting a username and a recurring handler for sending messages.
-        button_send.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                String username = takeMessage();
-
-                // Try to connect to the server with the given username.
-                try {
-                    Socket socket = new Socket("localhost", 7777);
-                    client = new Client(socket, username);
-                    client.logIn();
-                } catch (IOException ioe) {
-                    System.out.println("Error connecting to the server. Perhaps it is offline or your configuration is incorrect.");
-                }
-
-                // This is a one-time action for getting a username. The handler has fired, so remove it.
-                button_send.removeEventHandler(ActionEvent.ANY, this);
-
-                client.listenForMessages(vbox_messages);
-
-                // Set the message sending event handler.
-                button_send.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent actionEvent) {
-                        String message = takeMessage();
-
-                        if (!message.isEmpty()) {
-                            HBox messageBox = createSentMessageBox(message);
-                            vbox_messages.getChildren().add(messageBox);
-                            client.sendMessage(message);
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    /**
-     * Attaches a received message to the bottom of the message display.
-     * @param message
-     * @param vbox
-     */
-    public static void attachReceivedMessage(String message, VBox vbox) {
-        HBox messageBox = createReceivedMessageBox(message);
-
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                vbox.getChildren().add(messageBox);
-            }
-        });
-    }
-
-    /**
-     * Logs the client out if it has been connected to the server.
-     */
-    public void logOut() {
-        if (client != null) {
-            client.logOut();
-        }
-    }
-
-    public EventHandler<WindowEvent> getOnCloseHandler() {
-        return windowEvent -> logOut();
     }
 }
