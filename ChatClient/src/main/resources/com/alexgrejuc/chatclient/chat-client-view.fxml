@@ -6,7 +6,7 @@
 
 <AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/16" fx:controller="com.alexgrejuc.chatclient.ClientController">
     <children>
-        <Button fx:id="button_send" layoutX="404" layoutY="338" text="Send" />
+        <Button fx:id="button_choose" layoutX="404" layoutY="338" text="Send" />
         <TextField fx:id="tf_message" layoutX="30" layoutY="338" prefHeight="26" prefWidth="361" />
         <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418">
             <content>

@@ -1,11 +1,12 @@
 package com.alexgrejuc.chatserver.server;
 
-import com.alexgrejuc.chatserver.message.MessageInfo;
-import com.alexgrejuc.chatserver.message.MessageInfoParser;
+import com.alexgrejuc.chatmessage.ChatMessage;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 /**
  * Handles an individual client's connection, disconnection, and messaging.
@@ -14,29 +15,31 @@ public class ClientHandler implements Runnable {
     public static HashMap<String, ClientHandler> clientHandlers = new HashMap();
 
     private Socket socket;
-    private BufferedReader messageReader;
-    private BufferedWriter messageWriter;
+    private ObjectInputStream messageInput;
+    private ObjectOutputStream messageOutput;
     private String clientUsername;
 
     /**
-     * Creates a client handler, gets the client's username, and broadcasts that they have entered the chat.
+     * Creates a client handler, gets the client's senderName, and broadcasts that they have entered the chat.
      * @param socket
      */
-    public ClientHandler(Socket socket){
+    public ClientHandler(Socket socket) {
         try {
             this.socket = socket;
-            this.messageReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            this.messageWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.messageInput = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+            this.messageOutput = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            messageOutput.flush();
 
-            // A client sends their username when first logging in
-            this.clientUsername = messageReader.readLine();
+            ChatMessage loginMessage = (ChatMessage) messageInput.readObject();
+            // A client sends their senderName when first logging in
+            this.clientUsername = loginMessage.senderName();
             System.out.println(clientUsername + " has connected.");
 
             clientHandlers.put(this.clientUsername, this);
             broadcastServerMessage(clientUsername + " has entered the chat.");
-        } catch (IOException ioe) {
+        } catch (IOException | ClassNotFoundException e) {
             System.err.println("Error creating client handler:");
-            ioe.printStackTrace();
+            e.printStackTrace();
             closeAllResources();
         }
     }
@@ -46,31 +49,44 @@ public class ClientHandler implements Runnable {
      */
     @Override
     public void run() {
-        String messageFromClient;
-        boolean clientConnected = true;
+        ChatMessage messageFromClient;
 
         // isClosed checks that socket has not been closed from the server side (e.g. due to exception)
-        // clientConnected checks that the socket has not been closed from the client side
-        while (!socket.isClosed() && clientConnected) {
+        while (!socket.isClosed()) {
             try {
-                messageFromClient = messageReader.readLine();
+                messageFromClient = (ChatMessage) messageInput.readObject();
 
-                // null means the end of stream was reached, i.e. the client disconnected abruptly
-                clientConnected = messageFromClient != null && !messageFromClient.equalsIgnoreCase(":quit");
-
-                if (clientConnected) {
-                    MessageInfo mi = MessageInfoParser.parse(messageFromClient);
-                    //broadcastMessage(messageFromClient);
-                    sendMessage(mi);
+                if (messageFromClient != null && !messageFromClient.message().equalsIgnoreCase(":quit")) {
+                    sendMessage(populateRecipients(messageFromClient));
                 }
                 else {
                     closeAllResources();
                 }
-            } catch (IOException ioe) {
+            }
+             catch (IOException | ClassNotFoundException e) {
                 System.err.println("Error reading message from client: ");
-                ioe.printStackTrace();
+                e.printStackTrace();
                 closeAllResources();
             }
+        }
+    }
+
+    /**
+     * Inserts all recipients except for the sending client in the case that this is a broadcast message.
+     * @param messageFromClient
+     * @return
+     */
+    private ChatMessage populateRecipients(ChatMessage messageFromClient) {
+        // The client has specified recipients, it is not a broadcast message
+        if (messageFromClient.recipientNames() != null) {
+            return messageFromClient;
+        }
+        else {
+            var recipients = clientHandlers.keySet().stream()
+                                                                   .filter(name -> !name.equals(clientUsername))
+                                                                   .collect(Collectors.toCollection(ArrayList::new));
+
+            return new ChatMessage(messageFromClient.message(), messageFromClient.senderName(), recipients, messageFromClient.attachments());
         }
     }
 
@@ -79,13 +95,12 @@ public class ClientHandler implements Runnable {
      * @param message
      * @param recipientName
      */
-    private void sendMessageToOne(String message, String sender, String recipientName) {
+    private void sendMessageToOne(ChatMessage message, String recipientName) {
         if (clientHandlers.containsKey(recipientName)) {
             try {
                 var recipient = clientHandlers.get(recipientName);
-                recipient.messageWriter.write(sender + ": " + message);
-                recipient.messageWriter.newLine();
-                recipient.messageWriter.flush();
+                recipient.messageOutput.writeObject(message);
+                recipient.messageOutput.flush();
             } catch (IOException ioe) {
                 System.err.println("Error sending message from " + this.clientUsername + " to " + recipientName + ":");
                 ioe.printStackTrace();
@@ -95,25 +110,13 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Sends a message to all the recipients specified by the client.
+     * Sends a message to all the recipientNames specified by the client.
      * @param message
      */
-    private void sendMessage(MessageInfo message) {
-        // User specified recipients, so only send to them
-        if (message.recipients.isPresent()) {
-            for (String recipient : message.recipients.get()) {
-                sendMessageToOne(message.message, clientUsername, recipient);
-            }
+    private void sendMessage(ChatMessage message) {
+        for (String recipient : message.recipientNames()) {
+            sendMessageToOne(message, recipient);
         }
-        else {
-            // Usernames were not specified in the message string, so message all the other users
-            for (String recipient : clientHandlers.keySet()) {
-                if (!recipient.equals(clientUsername)) {
-                    sendMessageToOne(message.message, clientUsername, recipient);
-                }
-            }
-        }
-
     }
 
     /**
@@ -124,7 +127,7 @@ public class ClientHandler implements Runnable {
     public void broadcastServerMessage(String message) {
         for (ClientHandler clientHandler : clientHandlers.values()) {
             if (clientHandler != this) {
-                sendMessageToOne(message, "SERVER", clientHandler.clientUsername);
+                sendMessageToOne(new ChatMessage(message, "SERVER", new ArrayList<>(), new ArrayList<>()), clientHandler.clientUsername);
             }
         }
     }
@@ -146,7 +149,7 @@ public class ClientHandler implements Runnable {
     public void closeAllResources() {
         removeClientHandler();
 
-        Closeable[] resources = new Closeable[]{messageReader, messageWriter, socket};
+        Closeable[] resources = new Closeable[]{messageInput, messageOutput, socket};
 
         try {
             for (Closeable r : resources) {

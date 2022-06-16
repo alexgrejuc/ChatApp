@@ -38,6 +38,12 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.alexgrejuc</groupId>
+            <artifactId>ChatMessage</artifactId>
+            <version>1.0-</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

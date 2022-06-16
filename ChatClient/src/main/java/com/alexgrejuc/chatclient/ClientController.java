@@ -3,7 +3,6 @@ package com.alexgrejuc.chatclient;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -20,17 +19,21 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.ResourceBundle;
 
 public class ClientController implements Initializable {
 
     @FXML
-    private Button button_send;
+    private Button button_choose;
     @FXML
     private TextField tf_message;
     @FXML
@@ -40,6 +43,11 @@ public class ClientController implements Initializable {
 
     private Client client;
 
+    private Stage stage;
+
+    private FileChooser fileChooser;
+    private ArrayList<File> attachments;
+
     /**
      * Initializes the event handlers for signing in, sending, receiving, and updating the display.
      * @param url
@@ -47,6 +55,13 @@ public class ClientController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+        // This will be connected to button_choose when the stage is set
+        fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter filter = new FileChooser.ExtensionFilter("PNG Images", "*.png");
+        fileChooser.getExtensionFilters().add(filter);
+
+        attachments = new ArrayList<>();
+
         tf_message.setText("Enter a username:");
 
         // Scroll to bottom when messages are sent.
@@ -57,8 +72,7 @@ public class ClientController implements Initializable {
             }
         });
 
-
-        // A one-time event that clears the username prompt text.
+        // A one-time event that clears the senderName prompt text.
         tf_message.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent mouseEvent) {
@@ -67,14 +81,14 @@ public class ClientController implements Initializable {
             }
         });
 
-        // Sets a one-time handler for getting a username and a recurring handler for sending messages.
+        // Sets a one-time handler for getting a senderName and a recurring handler for sending messages.
         tf_message.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent keyEvent) {
                 if (keyEvent.getCode().equals(KeyCode.ENTER)) {
                     String username = takeMessage();
 
-                    // Try to connect to the server with the given username.
+                    // Try to connect to the server with the given senderName.
                     try {
                         Socket socket = new Socket("localhost", 7777);
                         client = new Client(socket, username);
@@ -83,13 +97,35 @@ public class ClientController implements Initializable {
                         System.out.println("Error connecting to the server. Perhaps it is offline or your configuration is incorrect.");
                     }
 
-                    // This is a one-time action for getting a username. The handler has fired, so remove it.
+                    // This is a one-time action for getting a senderName. The handler has fired, so remove it.
                     tf_message.removeEventHandler(KeyEvent.KEY_PRESSED, this);
                     client.listenForMessages(vbox_messages);
                     tf_message.setOnKeyPressed(ke -> handleTextFieldEnterKey(ke));
                 }
             }
         });
+    }
+
+    /**
+     * Sets the stage and register stage-based events
+     * @param stage
+     */
+    public void setStage(Stage stage) {
+        this.stage = stage;
+
+        stage.setOnCloseRequest(getOnCloseHandler());
+        button_choose.setOnMouseClicked(e -> chooseFile());
+    }
+
+    /**
+     * Allows user to choose a file and adds it to the list of attachments.
+     */
+    private void chooseFile() {
+        File chosenFile = fileChooser.showOpenDialog(stage);
+
+        if (chosenFile != null) {
+            attachments.add(chosenFile);
+        }
     }
 
     /**
@@ -103,15 +139,26 @@ public class ClientController implements Initializable {
     }
 
     /**
-     * Sends the message in the text field and updates the display.
+     * Sends the message in the text field along with any attachments and updates the display.
      */
     private void sendMessage() {
-        String message = takeMessage();
+        String userInputMessage = takeMessage();
 
-        if (!message.isEmpty()) {
-            HBox messageBox = createSentMessageBox(message);
+        if (!userInputMessage.isEmpty()) {
+            // Display the message text
+            HBox messageBox = createSentMessageBox(userInputMessage);
             vbox_messages.getChildren().add(messageBox);
-            client.sendMessage(message);
+
+            // Display the attachment names
+            for (var a: attachments) {
+                HBox attachmentBox = createSentMessageBox(a.getName());
+                vbox_messages.getChildren().add(attachmentBox);
+            }
+
+            client.sendMessageFromInput(userInputMessage, attachments);
+
+            // Reset the controller's attachments, but don't clear the original list since the client needs them
+            attachments = new ArrayList<>();
         }
     }
 
@@ -131,9 +178,7 @@ public class ClientController implements Initializable {
 
         Platform.runLater(new Runnable() {
             @Override
-            public void run() {
-                vbox.getChildren().add(messageBox);
-            }
+            public void run() { vbox.getChildren().add(messageBox); }
         });
     }
 
