@@ -1,5 +1,6 @@
 package com.alexgrejuc.chatclient;
 
+import com.alexgrejuc.chatmessage.Attachment;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -23,8 +24,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ public class ClientController implements Initializable {
     private Stage stage;
 
     private FileChooser fileChooser;
-    private ArrayList<File> attachments;
+    private ArrayList<Attachment> attachments;
 
     /**
      * Initializes the event handlers for signing in, sending, receiving, and updating the display.
@@ -124,7 +124,17 @@ public class ClientController implements Initializable {
         File chosenFile = fileChooser.showOpenDialog(stage);
 
         if (chosenFile != null) {
-            attachments.add(chosenFile);
+            try {
+                var fis = new BufferedInputStream(new FileInputStream(chosenFile));
+                var attachment = new Attachment(chosenFile.getName(), fis.readAllBytes());
+                attachments.add(attachment);
+            } catch (FileNotFoundException fnf) {
+                System.err.println("Could not find the selected file: ");
+                fnf.printStackTrace();
+            } catch (IOException io) {
+                System.err.println("Could not read file contents: ");
+                io.printStackTrace();
+            }
         }
     }
 
@@ -151,7 +161,7 @@ public class ClientController implements Initializable {
 
             // Display the attachment names
             for (var a: attachments) {
-                HBox attachmentBox = createSentMessageBox(a.getName());
+                HBox attachmentBox = createSentMessageBox(a.name());
                 vbox_messages.getChildren().add(attachmentBox);
             }
 

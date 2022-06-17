@@ -9,7 +9,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ChatMessageParserTest {
-    ArrayList<File> noAttachments = new ArrayList<>();
+    ArrayList<Attachment> noAttachments = new ArrayList<>();
 
     @Test
     void messageAll() {

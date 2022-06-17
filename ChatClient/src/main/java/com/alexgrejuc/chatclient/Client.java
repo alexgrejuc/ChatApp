@@ -1,5 +1,6 @@
 package com.alexgrejuc.chatclient;
 
+import com.alexgrejuc.chatmessage.Attachment;
 import com.alexgrejuc.chatmessage.ChatMessage;
 import com.alexgrejuc.chatmessage.ChatMessageParser;
 import javafx.scene.layout.VBox;
@@ -18,6 +19,7 @@ public class Client {
     private ObjectOutputStream messageOutput;
 
     private String username;
+    private File storagePath;
 
     public Client(Socket socket, String username) {
         try {
@@ -28,6 +30,7 @@ public class Client {
             this.messageOutput = new ObjectOutputStream(new BufferedOutputStream(socket.getOutputStream()));
             messageOutput.flush();
             this.messageInput = new ObjectInputStream(new BufferedInputStream(socket.getInputStream()));
+            storagePath = new File("./");
         } catch (IOException ioe) {
             System.err.println("Error creating client:");
             ioe.printStackTrace();
@@ -54,9 +57,28 @@ public class Client {
      * Parses user input and sends it as a message from this client to the intended recipients.
      * @param input
      */
-    public void sendMessageFromInput(String input, ArrayList<File> attachments) {
+    public void sendMessageFromInput(String input, ArrayList<Attachment> attachments) {
         ChatMessage message = ChatMessageParser.parse(input, username, attachments);
         sendMessage(message);
+    }
+
+    /**
+     * Displays attachments in the chat window and downloads them.
+     * @param attachments
+     * @param vbox_messages The box that messages will be displayed in.
+     */
+    public void handleAttachments(ArrayList<Attachment> attachments, VBox vbox_messages) {
+        for (var a: attachments) {
+            ClientController.attachReceivedMessage(a.name() + " | " + a.contents().length, vbox_messages);
+            var file = new File(a.name());
+
+            try (var fos = new BufferedOutputStream(new FileOutputStream(file))) {
+                fos.write(a.contents());
+            } catch (IOException io) {
+                System.err.println("Error saving attachment: ");
+                io.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -86,11 +108,7 @@ public class Client {
                     try {
                         ChatMessage message = (ChatMessage) messageInput.readObject();
                         ClientController.attachReceivedMessage(message.senderName() + ": " + message.message(), vbox_messages);
-
-                        // TODO: download the images
-                        for (var a : message.attachments()) {
-                            ClientController.attachReceivedMessage(a.getName(), vbox_messages);
-                        }
+                        handleAttachments(message.attachments(), vbox_messages);
                     } catch (EOFException eof) {
                         System.out.println("Cannot receive messages because the server is offline.");
                         closeAllResources();

@@ -16,5 +16,5 @@ public record ChatMessage(
         String message,
         String senderName,
         ArrayList<String> recipientNames,
-        ArrayList<File> attachments
+        ArrayList<Attachment> attachments
 ) implements Serializable {}

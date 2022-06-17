@@ -13,7 +13,7 @@ public class ChatMessageParser {
      * @param attachments Attachments associated with this message.
      * @return the parsed message information
      */
-    public static ChatMessage parse(String inputString, String senderName, ArrayList<File> attachments) {
+    public static ChatMessage parse(String inputString, String senderName, ArrayList<Attachment> attachments) {
         var recipientPattern = Pattern.compile("(@\\w+\\s)");
         var matcher = recipientPattern.matcher(inputString);
 
