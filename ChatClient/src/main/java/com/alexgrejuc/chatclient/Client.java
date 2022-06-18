@@ -65,11 +65,9 @@ public class Client {
     /**
      * Displays attachments in the chat window and downloads them.
      * @param attachments
-     * @param vbox_messages The box that messages will be displayed in.
      */
-    public void handleAttachments(ArrayList<Attachment> attachments, VBox vbox_messages) {
+    public void handleAttachments(ArrayList<Attachment> attachments) {
         for (var a: attachments) {
-            ClientController.attachReceivedMessage(a.name() + " | " + a.contents().length, vbox_messages);
             var file = new File(a.name());
 
             try (var fos = new BufferedOutputStream(new FileOutputStream(file))) {
@@ -107,8 +105,8 @@ public class Client {
                 while (!socket.isClosed()) {
                     try {
                         ChatMessage message = (ChatMessage) messageInput.readObject();
-                        ClientController.attachReceivedMessage(message.senderName() + ": " + message.message(), vbox_messages);
-                        handleAttachments(message.attachments(), vbox_messages);
+                        ClientController.attachReceivedMessage(message, vbox_messages);
+                        handleAttachments(message.attachments());
                     } catch (EOFException eof) {
                         System.out.println("Cannot receive messages because the server is offline.");
                         closeAllResources();
