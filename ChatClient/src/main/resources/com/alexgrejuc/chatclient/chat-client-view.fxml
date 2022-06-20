@@ -3,20 +3,56 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
+<?import org.kordamp.ikonli.javafx.*?>
 
-<AnchorPane fx:id="ap_main" prefHeight="396" prefWidth="478" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/16" fx:controller="com.alexgrejuc.chatclient.ClientController">
-    <children>
-        <Button fx:id="button_choose" layoutX="404" layoutY="338" text="Send" />
-        <TextField fx:id="tf_message" layoutX="30" layoutY="338" prefHeight="26" prefWidth="361" />
-        <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418">
-            <content>
-                <VBox fx:id="vbox_messages" prefHeight="248" prefWidth="412" />
-            </content>
-        </ScrollPane>
-        <Label layoutX="163" layoutY="26.0" text="Chat Client">
-                <font>
-                    <Font name="Arial Rounded MT Bold" size="23" />
-                </font>
+<GridPane fx:id="gp_main" alignment="center" hgap="10" prefHeight="396" prefWidth="478" styleClass="light-gray-background" stylesheets="@style.css" vgap="10" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.alexgrejuc.chatclient.ClientController">
+
+    <GridPane hgap="10" vgap="10" GridPane.columnIndex="0" GridPane.rowIndex="0">
+        <Label text="ChatApp" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <font>
+                <Font name="System Bold" size="23.0" />
+            </font>
         </Label>
-    </children>
-</AnchorPane>
+
+        <columnConstraints>
+            <ColumnConstraints percentWidth="10"/>
+            <ColumnConstraints percentWidth="80" halignment="CENTER"/>
+            <ColumnConstraints percentWidth="10"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints />
+        </rowConstraints>
+    </GridPane>
+
+    <GridPane hgap="10" vgap="10" GridPane.columnIndex="0" GridPane.rowIndex="2">
+        <TextField fx:id="tf_message" styleClass="light-background" stylesheets="@style.css" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+
+        <Button fx:id="button_choose" mnemonicParsing="false" styleClass="light-background" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <graphic>
+                <FontIcon iconColor="#7d7c7a" iconLiteral="fa-paper-plane" iconSize="16" />
+            </graphic>
+        </Button>
+        <columnConstraints>
+            <ColumnConstraints percentWidth="92.5" />
+            <ColumnConstraints />
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints />
+        </rowConstraints>
+    </GridPane>
+
+    <ScrollPane fx:id="sp_main" fitToWidth="true" prefHeight="256" prefWidth="418" GridPane.columnIndex="0" GridPane.rowIndex="1">
+        <content>
+            <VBox fx:id="vbox_messages" prefHeight="248" prefWidth="412" styleClass="light-background" stylesheets="@style.css" />
+        </content>
+    </ScrollPane>
+
+   <columnConstraints>
+      <ColumnConstraints />
+   </columnConstraints>
+   <rowConstraints>
+      <RowConstraints />
+      <RowConstraints />
+      <RowConstraints />
+   </rowConstraints>
+</GridPane>

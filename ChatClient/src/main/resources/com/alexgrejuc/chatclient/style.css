@@ -1,0 +1,20 @@
+/**
+ * color palette: https://coolors.co/5b5b5b-7d7c7a-fc440f-1f01b9-f8f8f8
+**/
+
+.light-gray-background {
+    -fx-background-color: #7D7C7A;
+}
+
+.dark-gray-background {
+    -fx-background-color: #5B5B5B;
+}
+
+.light-background {
+    -fx-background-color: #F8F8F8;
+}
+
+/* An easy to spot color change for use during development. */
+.red {
+    -fx-background-color: #F30D0D;
+}

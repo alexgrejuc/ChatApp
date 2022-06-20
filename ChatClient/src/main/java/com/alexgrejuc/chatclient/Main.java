@@ -11,7 +11,7 @@ import java.io.IOException;
 public class Main extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        stage.setTitle("Chat Client");
+        stage.setTitle("ChatApp");
 
         FXMLLoader loader = new FXMLLoader(Main.class.getResource("chat-client-view.fxml"));
         Parent root = loader.load();
